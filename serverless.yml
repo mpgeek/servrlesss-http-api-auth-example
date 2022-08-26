@@ -1,0 +1,47 @@
+service: serverless-http-api
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-east-1'}
+  runtime: nodejs14.x
+  httpApi:
+    authorizers:
+      customAuthorizer:
+        type: request
+        functionName: authorizer
+        name: authorizer
+        resultTtlInSeconds: 300
+        enableSimpleResponses: true
+        payloadVersion: '2.0'
+        identitySource:
+          - $request.header.Authorization
+
+custom:
+  stage: ${opt:stage, 'sbx'}
+  api_token_secret_name: 'toc-store-middlware-api-token-${self:custom.stage}'
+
+functions:
+
+  authorizer:
+    handler: ./src/auth.handler
+    environment:
+      SECRET_NAME: ${self:custom.api_token_secret_name}
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - secretsmanager:GetSecretValue
+        Resource:
+          - 'arn:aws:secretsmanager:${self:provider.region}:*:secret:${self:custom.api_token_secret_name}-*'
+
+  hello:
+    handler: ./src/index.handler
+    events:
+      - httpApi:
+          method: get
+          path: /
+          authorizer:
+            name: customAuthorizer
+
+plugins:
+  - serverless-iam-roles-per-function
