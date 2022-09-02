@@ -5,6 +5,8 @@ provider:
   name: aws
   region: ${opt:region, 'us-east-1'}
   runtime: nodejs14.x
+  logs:
+    httpApi: true
   httpApi:
     authorizers:
       customAuthorizer:
@@ -40,6 +42,11 @@ functions:
       - httpApi:
           method: get
           path: /
+          authorizer:
+            name: customAuthorizer
+      - httpApi:
+          method: post
+          path: /post
           authorizer:
             name: customAuthorizer
 
